@@ -1,0 +1,7 @@
+flask
+psycopg2-binary
+gpxpy
+python-dotenv
+black
+flake8
+pytest

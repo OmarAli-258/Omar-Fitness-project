@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<!-- used Claude to explain how to build the friends section with search, pending requests and friends list. -->
+<html lang="en">
+<head>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>Community Feed - FitTrack</title>
+    <link rel="icon" href="/static/images/favicon.ico">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    {% include "navbar.html" %}
+
+    <main>
+        <section class="dash-header">
+            <div>
+                <h1>Community Feed 🌍</h1>
+                <p>See what your friends are up to</p>
+            </div>
+            <div>
+                <a href="/activities/new" class="btn btna" style="padding: 1rem 1.5rem; font-size: 1.1rem;">Log Activity</a>
+            </div>
+        </section>
+        <!-- Friends Section -->
+        <section class="friends-page">
+            <div class="friends-section">
+                <h2>Find Friends</h2>
+                <div class="search-wrapper">
+                    <form class="nav-search" id="friendSearchForm" onsubmit="return false;">
+                        <input type="text" id="friendSearchInput" placeholder="   Search by name..." autocomplete="off">
+                        <button type="submit">Search</button>
+                    </form>
+                    <div id="friendSearchResults" class="search-dropdown"></div>
+                </div>
+            </div>
+            <!-- only shows if user has incoming friend requests -->
+            {% if pending %}
+            <div class="friends-section">
+                <h2>Pending Requests</h2>
+                <div class="friends-list">
+                    {% for req in pending %}
+                    <div class="friend-card">
+                        <div class="friend-info">
+                            <strong>{{ req.name }}</strong>
+                            <p class="friend-email">{{ req.email }}</p>
+                        </div>
+                        <div class="friend-actions">
+                            <form method="POST" action="/friends/accept/{{ req.request_id }}" style="display: inline;">
+                                <button type="submit" class="btn btna">Accept</button>
+                            </form>
+                            <form method="POST" action="/friends/reject/{{ req.request_id }}" style="display: inline;">
+                                <button type="submit" class="btn btnb">Reject</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <!--list of friends youve accepted-->
+            <div class="friends-section">
+                <h2>Your Friends ({{ friends|length }})</h2>
+                {% if friends %}
+                    <div class="friends-list">
+                        {% for friend in friends %}
+                        <div class="friend-card">
+                            <div class="friend-info">
+                                <strong>{{ friend.name }}</strong>
+                                <p class="friend-email">{{ friend.email }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="friends-empty">No friends yet. Use the search above to find people!</p>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="feed-container">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center;">
+                <h2 style="margin: 0;">Activities</h2>
+                <div style="display: flex; gap: 0.5rem; margin-left: auto;">
+                    <a href="/feed?view=friends" class="btn {% if view == 'friends' %}btna{% else %}btnb{% endif %}" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Friends</a>
+                    <a href="/feed?view=everyone" class="btn {% if view == 'everyone' %}btna{% else %}btnb{% endif %}" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Everyone</a>
+                </div>
+            </div>
+            {% if feed_activities %}
+                <!-- this loop displays each public activity card in the community feed -->
+                {% for activity in feed_activities %}
+                <article class="feed-card" id="activity-{{ activity.id }}">
+                    <div class="feed-header">
+                        <div class="feed-user-action">
+                            <div class="feed-avatar" aria-hidden="true">{{ activity.user_name[0] }}</div>
+                            <div>
+                                <strong>{{ activity.user_name }}</strong> {{ activity.feed_message }}
+                            </div>
+                        </div>
+                        <div class="feed-meta">{{ activity.date }}</div>
+                    </div>
+
+                    <div class="feed-stats">
+                        <div class="feed-stat-item">⏱️ {{ activity.duration }} min</div>
+                        {% if activity.distance %}
+                        <div class="feed-stat-item">📏 {{ activity.distance }} km</div>
+                        {% endif %}
+                    </div>
+
+                    {% if activity.notes %}
+                    <p class="feed-notes">{{ activity.notes }}</p>
+                    {% endif %}
+
+                    {% if activity.route_data %}
+                    <div class="feed-map" data-route="{{ activity.route_data | safe }}"></div>
+                    {% endif %}
+
+                    <div class="feed-actions">
+                        <!-- this section shows the like button and social counts for the activity -->
+                        {% if session.get('user_id') %}
+                        <form method="POST" action="/feed/{{ activity.id }}/like?view={{ view }}">
+                            <button type="submit" class="feed-like-button {% if activity.liked_by_user %}feed-like-button-liked{% endif %}" aria-label="{% if activity.liked_by_user %}Unlike{% else %}Like{% endif %} {{ activity.type }} activity by {{ activity.user_name }}">
+                                {% if activity.liked_by_user %}Liked{% else %}Like{% endif %}
+                            </button>
+                        </form>
+                        {% else %}
+                        <a class="feed-login-link" href="/login">Log in to like</a>
+                        {% endif %}
+                        <span class="feed-action-count">{{ activity.like_count }} {{ 'like' if activity.like_count == 1 else 'likes' }}</span>
+                        <span class="feed-action-count">{{ activity.comment_count }} {{ 'comment' if activity.comment_count == 1 else 'comments' }}</span>
+                    </div>
+
+                    <!-- this section displays existing comments and lets logged in users add a new one -->
+                    <section class="feed-comments" aria-label="Comments on {{ activity.type }} activity by {{ activity.user_name }}">
+                        {% if activity.comments %}
+                            {% for comment in activity.comments %}
+                            <div class="feed-comment">
+                                <div class="feed-comment-header">
+                                    <strong>{{ comment.user_name }}</strong>
+                                    <div class="feed-comment-meta">
+                                        <span>{{ comment.display_created_at }}</span>
+                                        {% if session.get('user_id') == comment.user_id %}
+                                        <!-- this button lets users delete their own feed comments -->
+                                        <form method="POST" action="/feed/comments/{{ comment.id }}/delete?view={{ view }}">
+                                            <button type="submit" class="feed-comment-delete">Delete</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <p>{{ comment.body }}</p>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="feed-no-comments">No comments yet.</p>
+                        {% endif %}
+
+                        {% if session.get('user_id') %}
+                        <!-- this form posts a new comment for the selected feed activity -->
+                        <form class="feed-comment-form" method="POST" action="/feed/{{ activity.id }}/comments?view={{ view }}">
+                            <label for="comment-{{ activity.id }}">Add a comment</label>
+                            <textarea id="comment-{{ activity.id }}" name="comment" rows="2" maxlength="500" placeholder="Encourage {{ activity.user_name }}..."></textarea>
+                            <button type="submit" class="btn btna">Post Comment</button>
+                        </form>
+                        {% else %}
+                        <!-- this prompt appears when visitors need to log in before commenting -->
+                        <p class="feed-login-prompt"><a href="/login">Log in</a> to leave a comment.</p>
+                        {% endif %}
+                    </section>
+                </article>
+                {% endfor %}
+            {% else %}
+                <p class="feed-empty">No activities to show. Add friends to see what they're up to!</p>
+            {% endif %}
+        </section>
+    </main>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/friends.js"></script>
+    <script>
+        initFeedMaps();
+    </script>
+</body>
+</html>

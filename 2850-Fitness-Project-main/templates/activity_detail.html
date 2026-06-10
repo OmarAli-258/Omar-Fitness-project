@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!-- used Claude to explain how to make the back button use javascript history so users return to wherever they came from -->
+<html lang="en">
+<head>
+    <!-- this page shows the full details for one single activity including type, date, duration, distance and notes -->
+    <!-- provides options to edit the activity details or delete the entire activity from the database -->
+    <meta charset="UTF-8">
+    <title>FitTrack | View Activity</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="/static/images/favicon.ico">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        .detail-container {
+            max-width: 1000px;
+            margin: 3rem auto;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 3rem;
+            color: var(--text);
+        }
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .detail-header h1 {
+            color: var(--yellow);
+            font-size: 2rem;
+        }
+        .detail-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-item {
+            background: var(--bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .stat-item span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .stat-item strong {
+            font-size: 1.5rem;
+            color: var(--text);
+        }
+        .detail-notes {
+            background: var(--bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+        #map {
+            height: 400px;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            z-index: 1; /* Keep map below navbar */
+        }
+    </style>
+</head>
+<body>
+    {% include "navbar.html" %}
+
+    <main class="detail-container">
+        <!-- this header shows the activity type, private badge if needed and back button -->
+        <div class="detail-header">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <h1>{{ activity.type }}</h1>
+                {% if activity.is_public == 2 %}
+                <span style="background: #9b59b6; color: #fff; padding: 0.5rem 1rem; border-radius: 12px; font-size: 1rem; font-weight: 600;">Friends Only</span>
+                {% elif activity.is_public %}
+                <span style="background: #2ecc71; color: #fff; padding: 0.5rem 1rem; border-radius: 12px; font-size: 1rem; font-weight: 600;">Public</span>
+                {% else %}
+                <span style="background: var(--yellow); color: #000; padding: 0.5rem 1rem; border-radius: 12px; font-size: 1rem; font-weight: 600;">Private</span>
+                {% endif %}
+            </div>
+            <a href="javascript:history.back()" class="btn btnb">← Back</a>
+        </div>
+        <!-- this section shows the main stats for the activity -->
+        <div class="detail-stats">
+            <div class="stat-item">
+                <span>Date</span>
+                <strong>{{ activity.date }}</strong>
+            </div>
+            <div class="stat-item">
+                <span>Duration</span>
+                <strong>{{ activity.duration }} min</strong>
+            </div>
+            <div class="stat-item">
+                <span>Distance</span>
+                <strong>{{ activity.distance if activity.distance else 'N/A' }} km</strong>
+            </div>
+        </div>
+
+        <!-- this section shows notes only when the activity has notes saved -->
+        {% if activity.notes %}
+        <div class="detail-notes">
+            <h3 style="color: var(--yellow); margin-bottom: 0.5rem;">Notes</h3>
+            <p>{{ activity.notes }}</p>
+        </div>
+        {% endif %}
+
+        <!-- this section shows a map only when route data exists from a gpx upload -->
+        {% if activity.route_data %}
+        <div id="map"></div>
+        <script>
+            // load the map with the route from gpx
+            var routeData = {{ activity.route_data | safe }};
+            
+            if (routeData && routeData.length > 0) {
+                var map = L.map('map').setView([routeData[0][0], routeData[0][1]], 13);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                
+                var polyline = L.polyline(routeData, {color: '#3498db', weight: 6}).addTo(map);
+                map.fitBounds(polyline.getBounds());
+            }
+        </script>
+        {% endif %}
+
+        <!-- this section gives the user buttons to edit or delete the activity -->
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+            <a href="/activities/{{ activity.id }}/edit" class="btn btna">Edit</a>
+            <form method="POST" action="/activities/{{ activity.id }}/delete" style="display: inline;">
+                <button type="submit" class="btn btna btn-delete">Delete</button>
+            </form>
+        </div>
+    </main>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
+
+<!-- done comments for templates/activity_detail.html -->
+<!-- summary of comments: -->
+<!-- - page shows full details for one activity including type, date, duration and distance -->
+<!-- - displays a green Public badge or yellow Private badge depending on visibility setting -->
+<!-- - shows a back button to return to the activities list -->
+<!-- - displays any notes the user added when logging the activity -->
+<!-- - shows an interactive map when GPX route data was uploaded -->
+<!-- - provides an edit button to change activity details and a delete button to remove activity -->
