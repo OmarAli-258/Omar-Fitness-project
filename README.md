@@ -3,6 +3,10 @@ This project was developed for the **COMP2850 Software Engineering** module at t
 
 FitTrack is a web application designed to help users plan, record, and monitor their physical fitness activities. The system supports both casual users who want to maintain a healthy lifestyle and more competitive users who may be training for events such as races or triathlons.
 
+## Screenshot
+
+![FitTrack dashboard](screenshots/Dashboard.png)
+
 ## Features
 
 The application currently supports:
