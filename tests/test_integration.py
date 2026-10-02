@@ -10,8 +10,8 @@ class TestAuthenticationFlow:
             data={
                 "name": "New User",
                 "email": "newuser@example.com",
-                "password": "password123",
-                "confirm": "password123",
+                "password": "Password@123",
+                "confirm": "Password@123",
             },
             follow_redirects=False,
         )
@@ -26,8 +26,8 @@ class TestAuthenticationFlow:
             data={
                 "name": "DB Test User",
                 "email": "dbtest@example.com",
-                "password": "password123",
-                "confirm": "password123",
+                "password": "Password@123",
+                "confirm": "Password@123",
             },
         )
 
