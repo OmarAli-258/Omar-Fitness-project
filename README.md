@@ -1,6 +1,5 @@
 # Physical Fitness & Training Web Application
-
-This project is developed for the **COMP2850 Software Engineering** module at the **University of Leeds**.
+This project was developed for the **COMP2850 Software Engineering** module at the **University of Leeds**.
 
 FitTrack is a web application designed to help users plan, record, and monitor their physical fitness activities. The system supports both casual users who want to maintain a healthy lifestyle and more competitive users who may be training for events such as races or triathlons.
 
@@ -45,15 +44,17 @@ The project uses:
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- PostgreSQL database (local or hosted)
-- Git
+- Python 3.10 or higher
+- Docker for the Codespaces database setup below
+- Git if cloning the repository
 
 ### 1. Clone the Repository
 
+If you opened a GitHub Codespace from this repository, the code is already there—skip this step. Otherwise, clone it.
+
 ```bash
-git clone https://github.com/OmarAli258/2850-Fitness-Project.git
-cd 2850-Fitness-Project
+git clone https://github.com/OmarAli-258/Omar-Fitness-project.git
+cd Omar-Fitness-project
 ```
 
 ### 2. Create a Virtual Environment (Recommended)
@@ -63,7 +64,7 @@ cd 2850-Fitness-Project
 python -m venv venv
 venv\Scripts\activate
 
-# macOS/Linux
+# macOS/Linux and Codespaces
 python3 -m venv venv
 source venv/bin/activate
 ```
@@ -74,42 +75,31 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If any packages are missing, install them manually:
-
-```bash
-pip install flask python-dotenv psycopg2-binary werkzeug gpxpy chart.js
-```
-
 ### 4. Create a .env File
 
-Create a file called `.env` in the root directory of the project. A safe template is included as `.env.example`:
+In Codespaces, copy the example settings file:
 
-**Windows:**
-```powershell
-type nul > .env
-```
-
-**macOS/Linux:**
 ```bash
-touch .env
+cp .env.example .env
 ```
 
-Inside the `.env` file, add the PostgreSQL database connection string:
+Open `.env` and replace its contents with:
 
-```
-DATABASE_URL="postgresql://username:password@host:port/database_name"
-```
-
-Example for local PostgreSQL:
-```
-DATABASE_URL="postgresql://postgres:password@localhost:5432/fittrack"
+```text
+DATABASE_URL=postgresql://fitness:fitness_local_password@127.0.0.1:5433/fittrack
 ```
 
-**Important:** Do not commit the real `.env` file to GitHub because it contains private database credentials. The file is already in `.gitignore`. For assessment, use the provided `.env.example` format and share the real database connection string privately if graders need access.
+This address matches the local Docker database in step 5. `.env` contains database credentials and is ignored by Git; do not commit it.
 
 ### 5. Set Up the Database
 
-Ensure your PostgreSQL database is running and accessible. The application will create the necessary tables automatically on first run.
+In a Codespace, create a local PostgreSQL database with Docker:
+
+```bash
+docker run --name fitness-postgres -e POSTGRES_USER=fitness -e POSTGRES_PASSWORD=fitness_local_password -e POSTGRES_DB=fittrack -p 127.0.0.1:5433:5432 -d postgres:16
+```
+
+The application creates its tables when it starts. If you return to this Codespace later and the database container is stopped, run `docker start fitness-postgres`.
 
 ### 6. Run the Application
 
@@ -117,45 +107,31 @@ Ensure your PostgreSQL database is running and accessible. The application will 
 python app.py
 ```
 
-The app should run on `http://localhost:8080`
+The app should run on `http://localhost:8081`. In Codespaces, open its forwarded port 8081.
+
+The app currently runs with Flask debug mode enabled. Use these instructions for local development and demonstration, not for a public deployment.
 
 ### Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
 | "Module not found" error | Run `pip install -r requirements.txt` again |
-| Database connection error | Check `.env` file has correct `DATABASE_URL` |
-| Port already in use | Change port in `app.py` or stop other application |
-| Import errors | Ensure all dependencies from requirements.txt are installed |
+| Database connection error | Check `.env` has the correct `DATABASE_URL` and the database container is running |
+| Port already in use | Check whether the app is already running before starting another copy |
+| Import errors | Ensure all dependencies from `requirements.txt` are installed |
 
 ---
 
 ## Project Structure
 
-```
-2850-Fitness-Project/
-├── app.py                 # Main application entry point
-├── requirements.txt      # Python dependencies
-├── .env                   # Environment variables (create this)
-├── .gitignore             # Files to ignore in version control
-├── static/
-│   ├── css/
-│   │   └── style.css     # Application styles
-│   └── js/
-│       └── script.js     # Client-side scripts
-└── templates/
-    ├── base.html         # Base template
-    ├── home.html        # Landing page
-    ├── login.html       # Login page
-    ├── register.html    # Registration page
-    ├── dashboard.html   # User dashboard
-    ├── activities.html  # Activity logging and history
-    ├── plans.html       # Exercise plans
-    ├── races.html       # Race tracker
-    └── community.html   # Community feed
-```
-
----
+- `app.py` — starts the Flask app
+- `routes/` — handles the app’s pages and features
+- `data/` — database setup and queries
+- `templates/` — HTML pages
+- `static/` — CSS, JavaScript, and images
+- `tests/` — automated tests
+- `requirements.txt` — Python packages
+- `.env.example` — example database setting
 
 ## Development Workflow
 
@@ -164,39 +140,11 @@ The app should run on `http://localhost:8080`
 3. Push to GitHub and create a Pull Request
 4. After review, merge into the main branch
 
-See [Git Workflow](https://github.com/OmarAli258/2850-Fitness-Project/wiki/Git-Workflow) in the Wiki for detailed guidelines.
-
-## Test Login Details
-
-The following test accounts can be used to explore the application if they are available in the shared database. Each account represents one of the project personas.
-
-**Account 1: Justin**
-- Email: `justin@example.com`
-- Password: `Password123!`
-
-**Account 2: Sofia**
-- Email: `sofia@example.com`
-- Password: `Password123!`
-
-**Account 3: Noah**
-- Email: `noah@example.com`
-- Password: `Password123!`
-
-**Account 4: Keith**
-- Email: `keith@example.com`
-- Password: `Password123!`
-
-**Account 5: Layla**
-- Email: `layla@example.com`
-- Password: `Password123!`
-
-If these accounts are not available, a new account can be created through the **Sign Up** page.
-
 ## Database
 
 The system currently uses PostgreSQL to store application data persistently.
 
-**Tables:**
+**Tables include:**
 - Users
 - Activities
 - Races
@@ -207,7 +155,7 @@ Passwords are not stored as plain text. The system uses Werkzeug Security to has
 
 ## Project Management
 
-The project is organised using GitHub tools:
+The project was organised using GitHub tools:
 
 - **Wiki** – Project documentation including requirements, personas, user stories, job stories, wireframes, system design, and testing plan
 - **Project Board** – Kanban board used to manage development tasks
